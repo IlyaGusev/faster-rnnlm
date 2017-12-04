@@ -557,29 +557,22 @@ void SampleFromLM(NNet* nnet, int seed, int n_samples, Real generate_temperature
           s += probs[wid];
         }
 
-        // Sample threshold
-        double p = static_cast<double>(rand()) / RAND_MAX;
-        p *= s;
-
-        std::vector<int> order(nnet->vocab.size());
+        std::vector<std::pair<float, int>> prob_index;
         for (int wid = 0; wid < nnet->vocab.size(); ++wid) {
-            order[wid] = wid;
+          prob_index.push_back(std::pair<float, int>(probs[wid] / s, wid));
         }
-        std::random_shuffle(order.begin(), order.end());
 
-        // Find the word that corresponds to the threshold
-        int wid;
-        for (wid = 0; p >= 0 && wid < nnet->vocab.size(); ++wid) {
-          p -= probs[order[wid]];
+        std::sort(prob_index.begin(), prob_index.end());
+        for (int i = 0; i < nnet->vocab.size(); ++i) {
+           printf("%s %f\n", nnet->vocab.GetWordByIndex(prob_index[i].second), prob_index[i].first);
         }
-        wid -= 1;
-        sen.back() = order[wid];
+        fflush(stdout);
 
-        ending_log10prob += log10(probs[order[wid]]) - log10(s);
       }
-
-      printf("%s ", nnet->vocab.GetWordByIndex(sen.back()));
-      fflush(stdout);
+      char new_word[100];
+      scanf("%s", new_word);
+      int wid = nnet->vocab.GetIndexByWord(new_word);
+      sen.back() = wid;
       input.row(sen.size() - 1) = nnet->embeddings.row(sen.back());
       updater->ForwardStep(sen.size() - 1);
     }
